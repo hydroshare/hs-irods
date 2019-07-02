@@ -16,4 +16,4 @@ RUN apt install /tmp/hydroshare-quota-microservices-ubuntu16-x86_64.deb libcurl4
 
 RUN chmod -R 777 /home
 
-VOLUME /var/lib/irods /etc/irods /var/lib/postgresql/data
+VOLUME /var/lib/irods /etc/irods /var/lib/postgresql/data /root /home/hsuserproxy
