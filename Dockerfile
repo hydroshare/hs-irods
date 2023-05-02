@@ -1,6 +1,5 @@
-FROM postgres:10-buster
-MAINTAINER Phuong Doan <pdoan@cuahsi.org>
-
+FROM postgres:13.4-buster
+COPY docker-entrypoint.sh /
 ENV IRODS_VERSION=4.2.6
 
 # set user/group IDs for irods account
