@@ -1,29 +1,59 @@
-FROM postgres:10
-MAINTAINER Phuong Doan <pdoan@cuahsi.org>
+FROM python:3.9-buster
 
 ENV IRODS_VERSION=4.2.6
+
+COPY docker-entrypoint.sh /
 
 # set user/group IDs for irods account
 RUN groupadd -r irods --gid=998 \
     && useradd -r -g irods -d /var/lib/irods --uid=998 irods \
     && mv /docker-entrypoint.sh /postgres-docker-entrypoint.sh
 
+RUN printf "deb http://deb.debian.org/debian/ buster main\ndeb http://security.debian.org/debian-security buster/updates main" > /etc/apt/sources.list
+
+RUN apt-get update && apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    lsb-release \
+    sudo \
+    wget
+
+RUN sudo mkdir -p /etc/apt/keyrings
+RUN curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+COPY docker.list /etc/apt/sources.list.d/
+RUN sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 7EA0A9C3F273FCD8
+
+RUN sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+
+RUN apt-get update && apt-get install -y --fix-missing --no-install-recommends \
+    apt-utils \
+    binutils \
+    postgresql-15 \
+    postgresql-client-15
+
+# TODO: iROds 4.2.x is holding us to Debian Buster which is EOL. It also requires libssl1.0.0 which is obsolete
+# we should upgrade to iRods 4.3, Debian Bullseye, etc but this will require at a minimum, changes to our iinit use in HS
+RUN wget http://snapshot.debian.org/archive/debian/20190501T215844Z/pool/main/g/glibc/multiarch-support_2.28-10_amd64.deb
+RUN sudo dpkg -i multiarch-support*.deb
+RUN wget http://snapshot.debian.org/archive/debian/20170705T160707Z/pool/main/o/openssl/libssl1.0.0_1.0.2l-1%7Ebpo8%2B1_amd64.deb
+RUN sudo dpkg -i libssl1.0.0*.deb
+
 # install iRODS 
-RUN echo "deb http://archive.debian.org/debian jessie-backports main" \
-  > /etc/apt/sources.list.d/jessie-backports.list \
-  && apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
-  wget \
+RUN echo "deb http://archive.debian.org/debian stretch-backports main" \
+  > /etc/apt/sources.list.d/stretch-backports.list
+RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
   gnupg2 \
-  apt-transport-https \
-  sudo \
   jq \
   libcurl4-openssl-dev \
   libxml2 \
-  moreutils \
-  && wget -qO - https://packages.irods.org/irods-signing-key.asc | apt-key add - \
+  moreutils
+RUN wget -qO - https://packages.irods.org/irods-signing-key.asc | apt-key add - \
   && echo "deb [arch=amd64] https://packages.irods.org/apt/ xenial main" \
-  > /etc/apt/sources.list.d/renci-irods.list \
-  && apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
+  > /etc/apt/sources.list.d/renci-irods.list
+RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
   irods-database-plugin-postgres=${IRODS_VERSION} \
   irods-icommands=${IRODS_VERSION}  \
   irods-runtime=${IRODS_VERSION}  \
@@ -60,9 +90,9 @@ ENV IRODS_SERVICE_ACCOUNT_NAME=irods \
   POSTGRES_PASSWORD=postgres
 
 # create postgresql.tar.gz
-RUN cd /var/lib/postgresql/data \
-    && tar -czf /postgresql.tar.gz . \
-    && cd /
+# RUN cd /var/lib/postgresql/data \
+#     && tar -czf /postgresql.tar.gz . \
+#     && cd /
 
 # create irods.tar.gz
 RUN cd /var/lib/irods \
