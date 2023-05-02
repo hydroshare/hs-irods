@@ -20,9 +20,7 @@ RUN wget http://snapshot.debian.org/archive/debian/20170705T160707Z/pool/main/o/
 RUN sudo dpkg -i libssl1.0.0*.deb
 
 # install iRODS 
-RUN echo "deb http://archive.debian.org/debian stretch-backports main" \
-  > /etc/apt/sources.list.d/stretch-backports.list \
-  && apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
+RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
   wget \
   gnupg2 \
   apt-transport-https \
