@@ -1,4 +1,4 @@
-FROM postgres:10
+FROM postgres:10-buster
 MAINTAINER Phuong Doan <pdoan@cuahsi.org>
 
 ENV IRODS_VERSION=4.2.6
@@ -8,10 +8,19 @@ RUN groupadd -r irods --gid=998 \
     && useradd -r -g irods -d /var/lib/irods --uid=998 irods \
     && mv /docker-entrypoint.sh /postgres-docker-entrypoint.sh
 
+RUN apt-get update && apt-get install -y \
+  wget \
+  sudo
+
+# TODO: iROds 4.2.x is holding us to Debian Buster which is EOL. It also requires libssl1.0.0 which is obsolete
+# we should upgrade to iRods 4.3, Debian Bullseye, etc but this will require at a minimum, changes to our iinit use in HS
+RUN wget http://snapshot.debian.org/archive/debian/20190501T215844Z/pool/main/g/glibc/multiarch-support_2.28-10_amd64.deb
+RUN sudo dpkg -i multiarch-support*.deb
+RUN wget http://snapshot.debian.org/archive/debian/20170705T160707Z/pool/main/o/openssl/libssl1.0.0_1.0.2l-1%7Ebpo8%2B1_amd64.deb
+RUN sudo dpkg -i libssl1.0.0*.deb
+
 # install iRODS 
-RUN echo "deb http://archive.debian.org/debian jessie-backports main" \
-  > /etc/apt/sources.list.d/jessie-backports.list \
-  && apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
+RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
   wget \
   gnupg2 \
   apt-transport-https \
