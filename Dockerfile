@@ -1,7 +1,9 @@
-FROM postgres:10-buster
-MAINTAINER Phuong Doan <pdoan@cuahsi.org>
+FROM postgres:13.4-buster
+LABEL maintainer="Devin Cowan <dcowan@cuahsi.org>"
 
-ENV IRODS_VERSION=4.2.6
+ENV IRODS_VERSION=4.2.11-1~bionic
+
+COPY ./docker-entrypoint.sh /
 
 # set user/group IDs for irods account
 RUN groupadd -r irods --gid=998 \
@@ -28,9 +30,10 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
   jq \
   libcurl4-openssl-dev \
   libxml2 \
-  moreutils \
-  && wget -qO - https://packages.irods.org/irods-signing-key.asc | apt-key add - \
-  && echo "deb [arch=amd64] https://packages.irods.org/apt/ xenial main" \
+  moreutils
+
+RUN wget -qO - https://packages.irods.org/irods-signing-key.asc | apt-key add - \
+  && echo "deb [arch=amd64] https://packages.irods.org/apt/ bionic main" \
   > /etc/apt/sources.list.d/renci-irods.list \
   && apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
   irods-database-plugin-postgres=${IRODS_VERSION} \
@@ -92,7 +95,7 @@ COPY ./hydroshare-data.re /tmp
 COPY ./hydroshare-user.re /tmp
 COPY ./hydroshare-quota-microservices-ubuntu16-x86_64.deb /tmp
 
-RUN chmod a+x /irods-docker-entrypoint.sh &&  apt install -y /tmp/hydroshare-quota-microservices-ubuntu16-x86_64.deb
+RUN chmod a+x /irods-docker-entrypoint.sh
 
 EXPOSE $IRODS_PORT $IRODS_CONTROL_PLANE_PORT $IRODS_PORT_RANGE_BEGIN-$IRODS_PORT_RANGE_END
 
