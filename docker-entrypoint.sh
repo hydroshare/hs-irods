@@ -141,7 +141,7 @@ if [[ ! -d /var/lib/irods/iRODS ]]; then
   # This is the original entrypoint script to initialize the database
   bash docker-entrypoint.sh postgres &
 else
-  su postgres -c '/usr/lib/postgresql/10/bin/pg_ctl start'
+  su postgres -c '/usr/lib/postgresql/13/bin/pg_ctl start'
 fi
 
 ### wait for database to stand up
