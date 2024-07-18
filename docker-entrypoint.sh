@@ -138,7 +138,8 @@ _update_uid_gid
 ### start postgres
 echo "### Starting Postgres ###"
 if [[ ! -d /var/lib/irods/iRODS ]]; then
-  bash /postgres-docker-entrypoint.sh postgres &
+  # This is the original entrypoint script to initialize the database
+  bash docker-entrypoint.sh postgres &
 else
   su postgres -c '/usr/lib/postgresql/10/bin/pg_ctl start'
 fi
