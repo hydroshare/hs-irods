@@ -90,7 +90,6 @@ COPY ./delete_user.sh /home/hsuserproxy/delete_user.sh
 COPY ./create_user.sh /home/hsuserproxy/create_user.sh
 COPY ./hydroshare-data.re /tmp
 COPY ./hydroshare-user.re /tmp
-COPY ./hydroshare-quota-microservices-ubuntu16-x86_64.deb /tmp
 
 RUN chmod a+x /irods-docker-entrypoint.sh
 
