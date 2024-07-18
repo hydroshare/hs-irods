@@ -4,6 +4,7 @@ set -e
 
 ### update UID:GID values for irods and postgres service accounts
 _update_uid_gid() {
+  echo "### Updating UID:GID values for irods and postgres service accounts ###"
   # if UID_POSTGRES = UID_IRODS, exit with error message
   if [[ ${UID_POSTGRES} = ${UID_IRODS} ]]; then
     echo "ERROR: user irods and user postgres cannot have same UID!!!"
@@ -38,6 +39,7 @@ _update_uid_gid() {
 
 ### initialize ICAT database
 _database_setup() {
+  echo "### Setting up iRODS database ###"
   cat > /init_icat.sql <<EOF
 CREATE USER ${IRODS_DATABASE_USER_NAME} WITH PASSWORD '${IRODS_DATABASE_PASSWORD}';
 CREATE DATABASE "${IRODS_DATABASE_NAME}";
@@ -50,6 +52,7 @@ EOF
 
 ### populate contents of /var/lib/irods if external volume mount is used
 _irods_tgz() {
+  echo "### populating /var/lib/irods with initial contents ###"
   cp /irods.tar.gz /var/lib/irods/irods.tar.gz
   cd /var/lib/irods/
   echo "!!! populating /var/lib/irods with initial contents !!!"
@@ -60,6 +63,7 @@ _irods_tgz() {
 
 ### populate contents of /var/lib/postgresql/data if external volume mount is used
 _postgresql_tgz() {
+  echo "### populating /var/lib/postgresql/data with initial contents ###"
   cp /postgresql.tar.gz /var/lib/postgresql/data/postgresql.tar.gz
   cd /var/lib/postgresql/data
   echo "!!! populating /var/lib/postgresql/data with initial contents !!!"
@@ -70,6 +74,7 @@ _postgresql_tgz() {
 
 ### generate iRODS config file
 _generate_config() {
+  echo "### Generating iRODS config file ###"
     cat > /irods.config <<EOF
 ${IRODS_SERVICE_ACCOUNT_NAME}
 ${IRODS_SERVICE_ACCOUNT_GROUP}
@@ -100,6 +105,7 @@ EOF
 
 ### update hostname if it has changed across docker containers using volume mounts
 _hostname_update() {
+  echo "### Checking for hostname change ###"
   local EXPECTED_HOSTNAME=$(sed -e 's/^"//' -e 's/"//' \
     <<<$(cat /var/lib/irods/.irods/irods_environment.json | \
     jq .irods_host))
@@ -130,6 +136,7 @@ fi
 _update_uid_gid
 
 ### start postgres
+echo "### Starting Postgres ###"
 if [[ ! -d /var/lib/irods/iRODS ]]; then
   bash /postgres-docker-entrypoint.sh postgres &
 else
@@ -137,30 +144,36 @@ else
 fi
 
 ### wait for database to stand up
+echo "### Waiting for Postgres to start ###"
 until [ $(pg_isready -h ${IRODS_DATABASE_SERVER_HOSTNAME} -q)$? -eq 0 ]; do
   echo "Postgres is unavailable - sleeping"
   sleep 2
 done
 
 ### start iRODS
+echo "### Starting iRODS ###"
 if [[ ! -d /var/lib/irods/iRODS ]]; then
   ### initialize iRODS if being run for the first time
+  echo "### Initializing iRODS ###"
   _database_setup
   _generate_config
   python /var/lib/irods/scripts/setup_irods.py < /irods.config
   _update_uid_gid
-else
-  ### restart iRODS if being run after initialization
-  until [ $(pg_isready -h ${IRODS_DATABASE_SERVER_HOSTNAME} -q)$? -eq 0 ]; do
-    echo "Postgres is unavailable - sleeping"
-    sleep 2
-  done
-  _hostname_update
-  service irods start
-  su irods -c 'echo ${IRODS_SERVER_ADMINISTRATOR_PASSWORD} | iinit'
 fi
 
+### restart iRODS if being run after initialization
+echo "### Restarting iRODS ###"
+until [ $(pg_isready -h ${IRODS_DATABASE_SERVER_HOSTNAME} -q)$? -eq 0 ]; do
+  echo "Postgres is unavailable - sleeping"
+  sleep 2
+done
+_hostname_update
+service irods start
+echo "### running iinit ###"
+su irods -c 'echo ${IRODS_SERVER_ADMINISTRATOR_PASSWORD} | iinit'
+
 ### Keep a foreground process running forever
+echo "iRODS is installed and running"
 tail -f /dev/null
 
 exit 0;
